@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}New Note — MorseVault{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        {% if current_folder %}
+        <a href="{{ url_for('folder_view', folder_id=current_folder['id']) }}" class="back-link nav-leave-link">&#8592; {{ current_folder['name'] }}</a>
+        {% else %}
+        <a href="{{ url_for('index') }}" class="back-link nav-leave-link">&#8592; Back</a>
+        {% endif %}
+        <h1 class="page-title">New Note</h1>
+        {% if current_folder %}
+        <p class="page-subtitle">Saving in <strong>{{ current_folder['name'] }}</strong></p>
+        {% endif %}
+    </div>
+</div>
+
+{% if error %}
+<div class="form-error-banner">{{ error }}</div>
+{% endif %}
+
+<div class="form-card secure-content">
+    <form method="POST" action="{{ url_for('create') }}" id="noteForm" novalidate>
+        {% if folder_id %}<input type="hidden" name="folder_id" value="{{ folder_id }}">{% endif %}
+
+        <div class="form-group">
+            <label for="title" class="form-label">Note Title</label>
+            <input type="text" id="title" name="title" class="form-input"
+                   placeholder="Enter a title..." autocomplete="off" maxlength="200" required>
+        </div>
+
+        <div class="form-group">
+            <label for="morse_text" class="form-label">
+                Morse Code
+                <span class="morse-mode-badge" id="morseBadge"></span>
+            </label>
+            <textarea id="morse_text" name="morse_text" class="form-textarea morse-input"
+                      placeholder="Type letters to auto-convert, or enter dots (.) and dashes (-) directly..."
+                      rows="10" required autocomplete="off" spellcheck="false"></textarea>
+            <div class="morse-keyboard" id="morseKeyboard" style="display:none;" aria-label="Morse keyboard">
+                <button type="button" class="morse-key" data-insert="." aria-label="Dot">.</button>
+                <button type="button" class="morse-key" data-insert="-" aria-label="Dash">-</button>
+                <button type="button" class="morse-key" data-insert="/" aria-label="Slash">/</button>
+                <button type="button" class="morse-key morse-key-space" data-insert=" " aria-label="Space">Space</button>
+                <button type="button" class="morse-key morse-key-backspace" data-action="backspace" aria-label="Backspace">&#9003;</button>
+            </div>
+            <p class="form-hint" id="morseInputHint">Letters auto-convert to Morse as you type. Only <code>.</code> <code>-</code> <code>/</code> and spaces are allowed.</p>
+        </div>
+
+        <div class="form-group">
+            <div class="passcode-toggle-row">
+                <label class="toggle-label">
+                    <input type="checkbox" id="useCustomToggle" name="use_custom_passcode" value="1"
+                           {% if not has_default %}checked{% endif %}>
+                    <span class="toggle-text">Use a custom passcode for this note</span>
+                </label>
+                {% if not has_default %}
+                <a href="{{ url_for('settings') }}" class="hint-link">Set default in Settings &#8599;</a>
+                {% endif %}
+            </div>
+            <div id="customPasscodeField" style="{% if has_default %}display:none;{% endif %}margin-top:12px;">
+                <label for="passcode" class="form-label">Custom Passcode</label>
+                <input type="password" id="passcode" name="passcode" class="form-input"
+                       placeholder="Set a passcode for this note..." autocomplete="new-password" maxlength="200">
+                <p class="form-hint">You'll need this passcode to translate or delete this note.</p>
+            </div>
+            {% if has_default %}
+            <p class="form-hint" id="defaultPasscodeNote" style="margin-top:8px;">
+                This note will use the <strong>default passcode</strong>. Enable the toggle above to set a custom one.
+            </p>
+            {% endif %}
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Note</button>
+            <button type="button" class="btn btn-secondary" id="clearBtn">Clear</button>
+        </div>
+    </form>
+</div>
+
+<!-- Unsaved changes modal -->
+<div class="modal-overlay" id="unsavedModalOverlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="unsavedModalTitle">
+        <div class="modal-header">
+            <h2 class="modal-title" id="unsavedModalTitle">Unsaved Changes</h2>
+            <button class="modal-close" id="unsavedModalClose" aria-label="Close">&#10005;</button>
+        </div>
+        <p class="modal-desc">You have unsaved changes.</p>
+        <div class="modal-actions modal-actions-stack">
+            <button type="button" class="btn btn-primary" id="unsavedSaveBtn">Save</button>
+            <button type="button" class="btn btn-danger" id="unsavedDiscardBtn">Discard</button>
+            <button type="button" class="btn btn-secondary" id="unsavedCancelBtn">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>window._keyboardMode = {{ keyboard_mode | tojson }};</script>
+{% endblock %}

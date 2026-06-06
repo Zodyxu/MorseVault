@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Forgot Passcode — MorseVault{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="{{ url_for('login') }}" class="back-link">&#8592; Login</a>
+        <h1 class="page-title">Forgot Passcode</h1>
+        <p class="page-subtitle">Verify your recovery email to reset your default passcode.</p>
+    </div>
+</div>
+{% if error %}<div class="form-error-banner">{{ error }}</div>{% endif %}
+<div class="form-card">
+    {% if step == 'email' %}
+    {% if not smtp_configured %}
+    <div class="smtp-setup-note">Email service is not configured on this server. Contact your administrator.</div>
+    {% endif %}
+    <div class="form-group">
+        <label for="recoveryEmail" class="form-label">Account Email</label>
+        <input type="email" id="recoveryEmail" class="form-input" placeholder="your@email.com" autocomplete="email">
+    </div>
+    <button type="button" class="btn btn-secondary" id="sendRecoveryOtpBtn" data-purpose="recovery_passcode" {% if not smtp_configured %}disabled{% endif %}>Send Verification Code</button>
+    <p class="otp-status" id="recoveryOtpStatus"></p>
+    <form method="POST" id="recoveryCodeForm" style="display:none; margin-top:20px;">
+        <input type="hidden" name="action" value="verify_code">
+        <div class="form-group">
+            <label for="code" class="form-label">Verification Code</label>
+            <input type="text" id="code" name="code" class="form-input otp-input" maxlength="6" inputmode="numeric" autocomplete="off">
+        </div>
+        <button type="submit" class="btn btn-primary">Verify Code</button>
+    </form>
+    {% elif step == 'reset' %}
+    <form method="POST">
+        <input type="hidden" name="action" value="set_new_passcode">
+        <div class="form-group">
+            <label for="new_passcode" class="form-label">New Passcode</label>
+            <input type="password" id="new_passcode" name="new_passcode" class="form-input" required>
+        </div>
+        <div class="form-group">
+            <label for="confirm_passcode" class="form-label">Confirm Passcode</label>
+            <input type="password" id="confirm_passcode" name="confirm_passcode" class="form-input" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Set New Passcode</button>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}

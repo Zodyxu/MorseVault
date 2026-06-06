@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}
+  {% if current_folder %}{{ current_folder['name'] }} — MorseVault{% else %}MorseVault — Notes{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<!-- Breadcrumb -->
+<nav class="breadcrumb" aria-label="Folder navigation">
+    <a href="{{ url_for('index') }}" class="breadcrumb-item">&#8962; Home</a>
+    {% for crumb in breadcrumb %}
+    <span class="breadcrumb-sep">&#8250;</span>
+    <a href="{{ url_for('folder_view', folder_id=crumb['id']) }}" class="breadcrumb-item">{{ crumb['name'] }}</a>
+    {% endfor %}
+</nav>
+
+<!-- Page header -->
+<div class="page-header page-header-dashboard">
+    <div>
+        {% if current_folder %}
+        <h1 class="page-title">{{ current_folder['name'] }}</h1>
+        <p class="page-subtitle">
+            {{ subfolders|length }} folder{% if subfolders|length != 1 %}s{% endif %} &middot;
+            {{ notes|length }} note{% if notes|length != 1 %}s{% endif %}
+        </p>
+        {% else %}
+        <h1 class="page-title">My Notes</h1>
+        <p class="page-subtitle">
+            {{ subfolders|length }} folder{% if subfolders|length != 1 %}s{% endif %} &middot;
+            {{ notes|length }} note{% if notes|length != 1 %}s{% endif %}
+        </p>
+        {% endif %}
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('create') }}{% if folder_id %}?folder_id={{ folder_id }}{% endif %}"
+           class="btn btn-primary">+ New Note</a>
+        <button type="button" class="btn btn-secondary" id="newFolderBtn">&#128193; New Folder</button>
+    </div>
+</div>
+
+<!-- New folder inline form (hidden by default) -->
+<div class="new-folder-form" id="newFolderForm" style="display:none;">
+    <input type="text" id="newFolderName" class="form-input" placeholder="Folder name..."
+           maxlength="200" autocomplete="off">
+    <button type="button" class="btn btn-primary" id="newFolderSave">Create</button>
+    <button type="button" class="btn btn-secondary" id="newFolderCancel">Cancel</button>
+    <p class="folder-form-error" id="folderFormError" style="display:none;"></p>
+</div>
+
+<!-- Search bar (shown when there's content) -->
+{% if subfolders or notes %}
+<div class="search-wrap">
+    <input type="search" id="noteSearch" class="search-input"
+           placeholder="Search notes and folders..." autocomplete="off" aria-label="Search">
+</div>
+{% endif %}
+
+<!-- Folders section -->
+{% if subfolders %}
+<div class="section-label-row">
+    <span class="section-label">Folders</span>
+</div>
+<div class="folders-grid" id="foldersGrid">
+    {% for folder in subfolders %}
+    <div class="folder-card" data-name="{{ folder['name'] | lower }}" data-id="{{ folder['id'] }}">
+        <a href="{{ url_for('folder_view', folder_id=folder['id']) }}" class="folder-card-link" aria-label="Open {{ folder['name'] }}">
+            <span class="folder-icon">&#128193;</span>
+            <div class="folder-card-body">
+                <span class="folder-name">{{ folder['name'] }}</span>
+                <span class="folder-meta">
+                    {% set parts = [] %}
+                    {% if folder['note_count'] > 0 %}{% set _ = parts.append(folder['note_count']|string + ' note' + ('' if folder['note_count'] == 1 else 's')) %}{% endif %}
+                    {% if folder['sub_count'] > 0 %}{% set _ = parts.append(folder['sub_count']|string + ' folder' + ('' if folder['sub_count'] == 1 else 's')) %}{% endif %}
+                    {% if parts %}{{ parts | join(' · ') }}{% else %}Empty{% endif %}
+                </span>
+            </div>
+        </a>
+        <div class="folder-card-actions">
+            <button class="folder-action-btn folder-rename-btn" title="Rename"
+                    data-id="{{ folder['id'] }}" data-name="{{ folder['name'] }}">&#9998;</button>
+            <button class="folder-action-btn folder-delete-btn" title="Delete"
+                    data-id="{{ folder['id'] }}" data-name="{{ folder['name'] }}">&#10005;</button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Notes section -->
+{% if notes %}
+<div class="section-label-row">
+    <span class="section-label">Notes</span>
+</div>
+<div class="notes-grid" id="notesGrid">
+    {% for note in notes %}
+    <a href="{{ url_for('view_note', note_id=note['id']) }}" class="note-card"
+       data-title="{{ note['title'] | lower }}">
+        <div class="note-card-body">
+            <h2 class="note-title">{{ note['title'] }}</h2>
+            <p class="note-date">{{ note['created_at'] | fmtdate }}</p>
+        </div>
+        <div class="note-card-arrow">&#8594;</div>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Empty search result -->
+<div class="empty-search" id="emptySearch" style="display:none;">
+    <p class="empty-text">No notes or folders match your search.</p>
+</div>
+
+<!-- Empty state (nothing at all in this folder) -->
+{% if not subfolders and not notes %}
+<div class="empty-state">
+    <div class="empty-icon">&#9632;&thinsp;&#9642;&thinsp;&#9632;&thinsp;&#9642;</div>
+    {% if current_folder %}
+    <h2 class="empty-title">This folder is empty.</h2>
+    <p class="empty-text">Create a note or subfolder to get started.</p>
+    {% else %}
+    <h2 class="empty-title">No Morse notes created yet.</h2>
+    <p class="empty-text">Your notes and folders will appear here.</p>
+    {% endif %}
+    <div class="empty-actions">
+        <a href="{{ url_for('create') }}{% if folder_id %}?folder_id={{ folder_id }}{% endif %}"
+           class="btn btn-primary">Create First Note</a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Folder delete confirm modal -->
+<div class="modal-overlay" id="folderDeleteOverlay" style="display:none;">
+    <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-header">
+            <h2 class="modal-title">Delete Folder</h2>
+            <button class="modal-close" id="folderDeleteClose">&#10005;</button>
+        </div>
+        <p class="modal-desc">Delete "<strong id="folderDeleteName"></strong>"? This only works if the folder is empty.</p>
+        <div class="modal-actions">
+            <button class="btn btn-danger" id="folderDeleteConfirm">Delete</button>
+            <button class="btn btn-secondary" id="folderDeleteCancel">Cancel</button>
+        </div>
+        <p class="modal-error" id="folderDeleteError" style="display:none;"></p>
+    </div>
+</div>
+
+<!-- Folder rename modal -->
+<div class="modal-overlay" id="folderRenameOverlay" style="display:none;">
+    <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-header">
+            <h2 class="modal-title">Rename Folder</h2>
+            <button class="modal-close" id="folderRenameClose">&#10005;</button>
+        </div>
+        <div class="modal-input-wrap">
+            <input type="text" id="folderRenameInput" class="form-input"
+                   placeholder="New name..." maxlength="200" autocomplete="off">
+        </div>
+        <p class="modal-error" id="folderRenameError" style="display:none;"></p>
+        <div class="modal-actions">
+            <button class="btn btn-primary" id="folderRenameConfirm">Rename</button>
+            <button class="btn btn-secondary" id="folderRenameCancel">Cancel</button>
+        </div>
+    </div>
+</div>
+
+{% if toast %}
+<span id="pageToast" data-msg="{{ toast }}" style="display:none;"></span>
+{% endif %}
+
+<script>
+    // Pass current folder_id to JS for folder creation
+    window._currentFolderId = {{ folder_id | tojson }};
+</script>
+{% endblock %}

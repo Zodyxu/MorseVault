@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Create Account — MorseVault{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Create Account</h1>
+        <p class="page-subtitle">Your email becomes your account — notes sync across devices.</p>
+    </div>
+</div>
+{% if error %}<div class="form-error-banner">{{ error }}</div>{% endif %}
+<div class="form-card auth-card">
+    <form method="POST" action="{{ url_for('register') }}">
+        <div class="form-group">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" id="email" name="email" class="form-input" required autocomplete="email">
+        </div>
+        <div class="form-group">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" id="password" name="password" class="form-input" required minlength="8" autocomplete="new-password">
+            <p class="form-hint">At least 8 characters.</p>
+        </div>
+        <div class="form-group">
+            <label for="confirm_password" class="form-label">Confirm Password</label>
+            <input type="password" id="confirm_password" name="confirm_password" class="form-input" required autocomplete="new-password">
+        </div>
+        {% if has_local_data %}
+        <div class="form-group">
+            <label class="toggle-label">
+                <input type="checkbox" name="link_local" value="1" checked>
+                <span class="toggle-text">Link existing local notes to this account ({{ local_notes }} note{% if local_notes != 1 %}s{% endif %})</span>
+            </label>
+        </div>
+        {% endif %}
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create Account</button>
+            <a href="{{ url_for('login') }}" class="btn btn-secondary">Already have an account?</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Login — MorseVault{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Login</h1>
+        <p class="page-subtitle">Access your synced notes on this device.</p>
+    </div>
+</div>
+{% if error %}<div class="form-error-banner">{{ error }}</div>{% endif %}
+<div class="form-card auth-card">
+    <form method="POST" action="{{ url_for('login') }}">
+        <div class="form-group">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" id="email" name="email" class="form-input" required autocomplete="email">
+        </div>
+        <div class="form-group">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" id="password" name="password" class="form-input" required autocomplete="current-password">
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Login</button>
+            <a href="{{ url_for('register') }}" class="btn btn-secondary">Create Account</a>
+        </div>
+    </form>
+    <p class="form-hint" style="margin-top:16px;">
+        <a href="{{ url_for('forgot_passcode') }}">Forgot passcode?</a>
+        &nbsp;&middot;&nbsp;
+        <a href="{{ url_for('forgot_security') }}">Forgot security question?</a>
+    </p>
+</div>
+{% endblock %}

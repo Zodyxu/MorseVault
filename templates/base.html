@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Cache-Control" content="no-store">
+    <title>{% block title %}MorseVault{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        (function () {
+            var saved = localStorage.getItem('mv-theme');
+            if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        })();
+    </script>
+</head>
+<body class="secure-app">
+    <!-- Privacy overlay: shown when tab/app loses focus -->
+    <div id="privacyOverlay" class="privacy-overlay" aria-hidden="true">
+        <div class="privacy-overlay-inner">
+            <span class="privacy-logo" aria-hidden="true">&#9632;</span>
+            <p class="privacy-title">MorseVault</p>
+            <p class="privacy-subtitle">Content hidden for your privacy</p>
+        </div>
+    </div>
+
+    <div class="app-shell" id="appShell">
+    {% if is_logged_in %}
+    <div class="sync-banner sync-banner-cloud">
+        <span>&#9729; Cloud sync active — {{ auth_user['email'] }}</span>
+        <a href="{{ url_for('logout') }}" class="sync-banner-link">Logout</a>
+    </div>
+    {% else %}
+    <div class="sync-banner sync-banner-local">
+        <span>&#9679; Local-only mode — notes stay on this device</span>
+        <a href="{{ url_for('login') }}" class="sync-banner-link">Login</a>
+        <a href="{{ url_for('register') }}" class="sync-banner-link">Register</a>
+    </div>
+    {% endif %}
+    <header class="site-header">
+        <div class="container header-inner">
+            <a href="{{ url_for('index') }}" class="site-logo">
+                <span class="logo-dot">&#9632;</span> MorseVault
+            </a>
+            <div class="header-controls">
+                <a href="{{ url_for('settings') }}" class="header-settings-link" title="Settings">&#9881;</a>
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+                    <span class="theme-icon theme-icon-light">&#9788;</span>
+                    <span class="theme-icon theme-icon-dark">&#9790;</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <div class="container footer-inner">
+            <span class="footer-name">MorseVault</span>
+            <span class="footer-sep">&#8212;</span>
+            <span class="footer-desc">Secure Morse Note System &nbsp;&#183;&nbsp; Python Flask Mini Project</span>
+        </div>
+    </footer>
+    </div><!-- /.app-shell -->
+
+    <script src="{{ url_for('static', filename='security.js') }}"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

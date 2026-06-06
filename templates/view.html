@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}{{ note['title'] }} — MorseVault{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        {% if folder_id %}
+        <a href="{{ url_for('folder_view', folder_id=folder_id) }}" class="back-link">&#8592; Back</a>
+        {% else %}
+        <a href="{{ url_for('index') }}" class="back-link">&#8592; Back</a>
+        {% endif %}
+        <h1 class="page-title">{{ note['title'] }}</h1>
+        <p class="page-subtitle">Saved on {{ note['created_at'] | fmtdate }}</p>
+    </div>
+    <div class="note-actions">
+        <button type="button" class="btn btn-secondary" id="editBtn" data-note-id="{{ note['id'] }}">Edit</button>
+        <button type="button" class="btn btn-secondary" id="moveBtn">Move</button>
+        <button type="button" class="btn btn-danger" id="deleteBtn" data-note-id="{{ note['id'] }}">Delete</button>
+    </div>
+</div>
+
+<div class="note-view-card secure-content">
+    <p class="note-section-label">Morse</p>
+    <div class="morse-display protected-text morse-display-collapsed" id="morseDisplay">{{ note['morse_text'] }}</div>
+    <p class="morse-preview-ellipsis" id="morseEllipsis" style="display:none;">...</p>
+    <button type="button" class="btn btn-secondary btn-morse-toggle" id="morseToggleBtn" style="display:none;">See More</button>
+
+    <div class="translate-action">
+        <button class="btn btn-translate" id="translateBtn"
+                data-note-id="{{ note['id'] }}"
+                data-timer="{{ timer_default }}"
+                data-auto-lock="{{ auto_lock_setting }}">
+            Translate Here
+        </button>
+    </div>
+
+    <div class="translation-result" id="translationResult" style="display:none;">
+        <div class="translation-result-header">
+            <p class="note-section-label">Translated Text</p>
+            <span class="translation-timer" id="translationTimer"></span>
+        </div>
+        <div class="translation-display protected-text" id="translationText"></div>
+    </div>
+</div>
+
+<!-- Translate modal -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-header">
+            <h2 class="modal-title" id="modalTitle">Unlock Translation</h2>
+            <button class="modal-close" id="modalClose" aria-label="Close">&#10005;</button>
+        </div>
+        <p class="modal-desc">Enter the passcode to reveal the English translation.</p>
+        <form id="passcodeForm" autocomplete="off">
+            <div class="modal-input-wrap">
+                <input type="password" id="passcodeInput" class="form-input"
+                       placeholder="Passcode..." autocomplete="off" maxlength="200" required>
+            </div>
+            <div class="modal-timer-row">
+                <label class="modal-timer-label" for="timerSelect">Hide after:</label>
+                <select id="timerSelect" class="timer-select">
+                    <option value="10"   {% if timer_default == '10'   %}selected{% endif %}>10 seconds</option>
+                    <option value="30"   {% if timer_default == '30'   %}selected{% endif %}>30 seconds</option>
+                    <option value="60"   {% if timer_default == '60'   %}selected{% endif %}>1 minute</option>
+                    <option value="1800" {% if timer_default == '1800' %}selected{% endif %}>30 minutes</option>
+                    <option value="3600" {% if timer_default == '3600' %}selected{% endif %}>1 hour</option>
+                    <option value="never"{% if timer_default == 'never'%}selected{% endif %}>Never</option>
+                </select>
+            </div>
+            <p class="modal-error" id="modalError"></p>
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary" id="modalSubmit">Unlock</button>
+                <button type="button" class="btn btn-secondary" id="modalCancelBtn">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit passcode modal -->
+<div class="modal-overlay" id="editModalOverlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+        <div class="modal-header">
+            <h2 class="modal-title" id="editModalTitle">Enter Passcode</h2>
+            <button class="modal-close" id="editModalClose" aria-label="Close">&#10005;</button>
+        </div>
+        <p class="modal-desc">Enter your passcode to edit this note.</p>
+        <form id="editPasscodeForm" autocomplete="off">
+            <div class="modal-input-wrap">
+                <input type="password" id="editPasscodeInput" class="form-input"
+                       placeholder="Passcode..." autocomplete="off" maxlength="200" required>
+            </div>
+            <p class="modal-error" id="editModalError"></p>
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary" id="editModalSubmit">Unlock Edit</button>
+                <button type="button" class="btn btn-secondary" id="editModalCancelBtn">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete modal -->
+<div class="modal-overlay" id="deleteModalOverlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+        <div class="modal-header">
+            <h2 class="modal-title" id="deleteModalTitle">Confirm Deletion</h2>
+            <button class="modal-close" id="deleteModalClose" aria-label="Close">&#10005;</button>
+        </div>
+        <p class="modal-desc">Enter your passcode to permanently delete this note.</p>
+        <form id="deleteForm" autocomplete="off">
+            <div class="modal-input-wrap">
+                <input type="password" id="deletePasscodeInput" class="form-input"
+                       placeholder="Passcode..." autocomplete="off" maxlength="200" required>
+            </div>
+            <p class="modal-error" id="deleteModalError"></p>
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-danger" id="deleteModalSubmit">Delete Note</button>
+                <button type="button" class="btn btn-secondary" id="deleteModalCancelBtn">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Move note modal -->
+<div class="modal-overlay" id="moveModalOverlay" style="display:none;">
+    <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-header">
+            <h2 class="modal-title">Move Note</h2>
+            <button class="modal-close" id="moveModalClose">&#10005;</button>
+        </div>
+        <p class="modal-desc">Select a destination folder for <strong>{{ note['title'] }}</strong>.</p>
+        <div class="modal-input-wrap">
+            <select id="moveFolderSelect" class="form-input timer-select">
+                <option value="">&#8962; Home (no folder)</option>
+            </select>
+        </div>
+        <p class="modal-error" id="moveModalError" style="display:none;"></p>
+        <div class="modal-actions">
+            <button class="btn btn-primary" id="moveConfirm">Move</button>
+            <button class="btn btn-secondary" id="moveCancelBtn">Cancel</button>
+        </div>
+    </div>
+</div>
+
+{% if toast %}
+<span id="pageToast" data-msg="{{ toast }}" style="display:none;"></span>
+{% endif %}
+
+<script>
+    window._noteId    = {{ note['id'] | tojson }};
+    window._folderId  = {{ folder_id | tojson }};
+    window._backUrl   = {{ (url_for('folder_view', folder_id=folder_id) if folder_id else url_for('index')) | tojson }};
+</script>
+{% endblock %}

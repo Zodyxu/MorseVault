@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+
+{% block title %}Settings — MorseVault{% endblock %}
+
+{% block content %}
+<div class="page-header page-header-settings">
+    <div>
+        {% if section %}
+        <a href="{{ url_for('settings') }}" class="back-link">&#8592; Settings</a>
+        {% endif %}
+        <h1 class="page-title">Settings</h1>
+        <p class="page-subtitle">
+            {% if section %}
+            {% if section == 'account' %}Your MorseVault account{% endif %}
+            {% if section == 'default-passcode' %}Set or change your default passcode{% endif %}
+            {% if section == 'security-question' %}Configure passcode recovery{% endif %}
+            {% if section == 'translation-timer' %}Control how long translations stay visible{% endif %}
+            {% if section == 'auto-lock-timer' %}Re-lock translations after inactivity{% endif %}
+            {% if section == 'appearance' %}Light and dark mode{% endif %}
+            {% if section == 'keyboard-mode' %}Choose how you enter Morse code{% endif %}
+            {% else %}
+            Manage your passcode, security, and preferences.
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+{% if error %}
+<div class="form-error-banner">{{ error }}</div>
+{% endif %}
+{% if success %}
+<div class="form-success-banner">{{ success }}</div>
+{% endif %}
+
+{% if not section %}
+<!-- ─── Settings Menu ─────────────────────────────────────────────── -->
+<nav class="settings-menu" aria-label="Settings categories">
+    <a href="{{ url_for('settings', section='account') }}" class="settings-menu-item">
+        <span class="settings-menu-label">Account</span>
+        <span class="settings-menu-meta">
+            {% if is_logged_in %}Synced{% else %}Local{% endif %}
+            <span class="settings-menu-arrow">&#8250;</span>
+        </span>
+    </a>
+    <a href="{{ url_for('settings', section='default-passcode') }}" class="settings-menu-item">
+        <span class="settings-menu-label">Default Passcode</span>
+        <span class="settings-menu-meta">
+            {% if has_default %}Set{% else %}Not set{% endif %}
+            <span class="settings-menu-arrow">&#8250;</span>
+        </span>
+    </a>
+    <a href="{{ url_for('settings', section='security-question') }}" class="settings-menu-item">
+        <span class="settings-menu-label">Security Question</span>
+        <span class="settings-menu-meta">
+            {% if has_security %}Set{% else %}Not set{% endif %}
+            <span class="settings-menu-arrow">&#8250;</span>
+        </span>
+    </a>
+    <a href="{{ url_for('settings', section='translation-timer') }}" class="settings-menu-item">
+        <span class="settings-menu-label">Translation Visibility Timer</span>
+        <span class="settings-menu-meta">
+            {% if timer_setting == 'never' %}Never{% elif timer_setting == '1800' %}30 min{% elif timer_setting == '3600' %}1 hr{% elif timer_setting == '60' %}1 min{% else %}{{ timer_setting }} sec{% endif %}
+            <span class="settings-menu-arrow">&#8250;</span>
+        </span>
+    </a>
+    <a href="{{ url_for('settings', section='auto-lock-timer') }}" class="settings-menu-item">
+        <span class="settings-menu-label">Auto Lock Timer</span>
+        <span class="settings-menu-meta">
+            {% if auto_lock_setting == 'never' %}Off{% elif auto_lock_setting == '300' %}5 min{% elif auto_lock_setting == '1800' %}30 min{% elif auto_lock_setting == '60' %}1 min{% else %}{{ auto_lock_setting }} sec{% endif %}
+            <span class="settings-menu-arrow">&#8250;</span>
+        </span>
+    </a>
+    <a href="{{ url_for('settings', section='appearance') }}" class="settings-menu-item">
+        <span class="settings-menu-label">Appearance</span>
+        <span class="settings-menu-meta">
+            Theme
+            <span class="settings-menu-arrow">&#8250;</span>
+        </span>
+    </a>
+    <a href="{{ url_for('settings', section='keyboard-mode') }}" class="settings-menu-item">
+        <span class="settings-menu-label">Keyboard Mode</span>
+        <span class="settings-menu-meta">
+            {% if keyboard_mode == 'morse' %}Morse{% else %}Alphabet{% endif %}
+            <span class="settings-menu-arrow">&#8250;</span>
+        </span>
+    </a>
+    <button type="button" class="settings-menu-item settings-menu-btn" id="morseTableBtn">
+        <span class="settings-menu-label">Morse Code Table</span>
+        <span class="settings-menu-meta">
+            Reference
+            <span class="settings-menu-arrow">&#8250;</span>
+        </span>
+    </button>
+</nav>
+
+{% elif section == 'account' %}
+<div class="settings-card">
+    {% if is_logged_in %}
+    <p class="settings-desc">You are logged in. Notes, folders, and settings sync to this account.</p>
+    <div class="email-verified-row">
+        <span class="email-verified-addr">{{ auth_user['email'] }}</span>
+        <span class="email-verified-tick">&#10003; Cloud synced</span>
+    </div>
+    {% if local_note_count > 0 %}
+    <form method="POST" action="{{ url_for('settings', section='account') }}" style="margin-top:16px;">
+        <input type="hidden" name="action" value="link_local_notes">
+        <input type="hidden" name="section" value="account">
+        <p class="form-hint">You have {{ local_note_count }} local note{% if local_note_count != 1 %}s{% endif %} on this device not yet linked to your account.</p>
+        <button type="submit" class="btn btn-secondary">Link Existing Notes to Account</button>
+    </form>
+    {% endif %}
+    <div class="settings-actions" style="margin-top:16px;">
+        <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
+    </div>
+    {% else %}
+    <p class="settings-desc">
+        You are in <strong>local-only</strong> mode. Notes stay on this device until you create an account.
+    </p>
+    <div class="settings-actions">
+        <a href="{{ url_for('register') }}" class="btn btn-primary">Create Account</a>
+        <a href="{{ url_for('login') }}" class="btn btn-secondary">Login</a>
+    </div>
+  {% if local_note_count > 0 %}
+    <p class="form-hint" style="margin-top:14px;">When registering, you can link {{ local_note_count }} existing local note{% if local_note_count != 1 %}s{% endif %} to your account.</p>
+    {% endif %}
+    {% endif %}
+</div>
+
+{% elif section == 'default-passcode' %}
+<div class="settings-card">
+    <p class="settings-desc">
+        All notes use this passcode unless a custom one is set.
+        {% if not has_default %}<strong>Set one to start creating notes.</strong>{% endif %}
+    </p>
+    <form method="POST" action="{{ url_for('settings', section='default-passcode') }}" id="passcodeForm">
+        <input type="hidden" name="action" value="set_default_passcode">
+        <input type="hidden" name="section" value="default-passcode">
+        <div class="settings-fields">
+            {% if has_default %}
+            <div class="form-group">
+                <label for="current_passcode" class="form-label">Current Passcode</label>
+                <input type="password" id="current_passcode" name="current_passcode"
+                    class="form-input" placeholder="Enter current passcode..." maxlength="200">
+            </div>
+            {% endif %}
+            <div class="form-group">
+                <label for="new_passcode" class="form-label">New Passcode</label>
+                <input type="password" id="new_passcode" name="new_passcode"
+                    class="form-input" placeholder="Enter new passcode..." maxlength="200">
+            </div>
+            <div class="form-group">
+                <label for="confirm_passcode" class="form-label">Confirm Passcode</label>
+                <input type="password" id="confirm_passcode" name="confirm_passcode"
+                    class="form-input" placeholder="Confirm new passcode..." maxlength="200">
+            </div>
+        </div>
+        <div class="settings-actions">
+            <button type="submit" class="btn btn-primary">
+                {% if has_default %}Update Passcode{% else %}Set Passcode{% endif %}
+            </button>
+            {% if is_logged_in %}
+            <a href="{{ url_for('forgot_passcode') }}" class="btn btn-secondary">Forgot Passcode?</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+{% elif section == 'security-question' %}
+<div class="settings-card">
+    <p class="settings-desc">Used for account recovery. Email verification is only required when you forget your question.</p>
+    <form method="POST" action="{{ url_for('settings', section='security-question') }}">
+        <input type="hidden" name="action" value="set_security">
+        <input type="hidden" name="section" value="security-question">
+        <div class="settings-fields">
+            {% if has_security %}
+            <div class="form-group">
+                <label class="form-label">Current Security Question</label>
+                <p class="settings-desc" style="margin:4px 0 0; font-weight:500;">{{ security_q }}</p>
+            </div>
+            <div class="form-group">
+                <label for="current_security_answer" class="form-label">Current Answer</label>
+                <input type="password" id="current_security_answer" name="current_security_answer"
+                    class="form-input" placeholder="Enter current answer to change..." maxlength="300">
+            </div>
+            {% endif %}
+            <div class="form-group">
+                <label for="security_question" class="form-label">{% if has_security %}New {% endif %}Security Question</label>
+                <input type="text" id="security_question" name="security_question"
+                    class="form-input" placeholder="e.g. What was your first pet's name?"
+                    value="{{ security_q if not has_security else '' }}" maxlength="300" required>
+            </div>
+            <div class="form-group">
+                <label for="security_answer" class="form-label">{% if has_security %}New {% endif %}Answer <span class="form-label-optional">(case-insensitive)</span></label>
+                <input type="password" id="security_answer" name="security_answer"
+                    class="form-input" placeholder="Your answer..." maxlength="300" required minlength="2">
+            </div>
+        </div>
+        <div class="settings-actions">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            {% if is_logged_in %}
+            <a href="{{ url_for('forgot_security') }}" class="btn btn-secondary">Forgot Security Question?</a>
+            {% endif %}
+        </div>
+    </form>
+    {% if is_logged_in %}
+    <p class="form-hint" style="margin-top:12px;"><a href="{{ url_for('forgot_passcode') }}">Forgot passcode?</a></p>
+    {% endif %}
+</div>
+
+{% elif section == 'translation-timer' %}
+<div class="settings-card">
+    <p class="settings-desc">How long the translated text stays visible before it auto-hides.</p>
+    <form method="POST" action="{{ url_for('settings', section='translation-timer') }}">
+        <input type="hidden" name="action" value="set_timer">
+        <input type="hidden" name="section" value="translation-timer">
+        <div class="timer-option-grid">
+            {% for val, label in [('10','10 sec'),('30','30 sec'),('60','1 min'),('1800','30 min'),('3600','1 hr'),('never','Never')] %}
+            <label class="timer-option {% if timer_setting == val %}timer-option-active{% endif %}">
+                <input type="radio" name="translation_timer" value="{{ val }}"
+                    {% if timer_setting == val %}checked{% endif %}>
+                <span>{{ label }}</span>
+            </label>
+            {% endfor %}
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top:16px;">Save</button>
+    </form>
+</div>
+
+{% elif section == 'auto-lock-timer' %}
+<div class="settings-card">
+    <p class="settings-desc">Re-locks the translation after a period of inactivity.</p>
+    <form method="POST" action="{{ url_for('settings', section='auto-lock-timer') }}">
+        <input type="hidden" name="action" value="set_auto_lock">
+        <input type="hidden" name="section" value="auto-lock-timer">
+        <div class="timer-option-grid">
+            {% for val, label in [('10','10 sec'),('30','30 sec'),('60','1 min'),('300','5 min'),('1800','30 min'),('never','Off')] %}
+            <label class="timer-option {% if auto_lock_setting == val %}timer-option-active{% endif %}">
+                <input type="radio" name="auto_lock_timer" value="{{ val }}"
+                    {% if auto_lock_setting == val %}checked{% endif %}>
+                <span>{{ label }}</span>
+            </label>
+            {% endfor %}
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top:16px;">Save</button>
+    </form>
+</div>
+
+{% elif section == 'appearance' %}
+<div class="settings-card">
+    <p class="settings-desc">Toggle between light and dark mode. Saved automatically on this device.</p>
+    <button class="btn btn-secondary btn-touch" id="themeToggleSettings">Switch Theme</button>
+</div>
+
+{% elif section == 'keyboard-mode' %}
+<div class="settings-card">
+    <p class="settings-desc">Choose how you enter Morse code when creating or editing notes.</p>
+    <form method="POST" action="{{ url_for('settings', section='keyboard-mode') }}">
+        <input type="hidden" name="action" value="set_keyboard_mode">
+        <input type="hidden" name="section" value="keyboard-mode">
+        <div class="keyboard-mode-grid">
+            <label class="keyboard-mode-option {% if keyboard_mode == 'alphabet' %}keyboard-mode-active{% endif %}">
+                <input type="radio" name="keyboard_mode" value="alphabet" {% if keyboard_mode == 'alphabet' %}checked{% endif %}>
+                <span class="keyboard-mode-title">Alphabet Keyboard</span>
+                <span class="keyboard-mode-desc">Type letters and numbers — they convert to Morse automatically.</span>
+            </label>
+            <label class="keyboard-mode-option {% if keyboard_mode == 'morse' %}keyboard-mode-active{% endif %}">
+                <input type="radio" name="keyboard_mode" value="morse" {% if keyboard_mode == 'morse' %}checked{% endif %}>
+                <span class="keyboard-mode-title">Morse Keyboard</span>
+                <span class="keyboard-mode-desc">Use dot, dash, slash, space, and backspace only — ideal if you know Morse.</span>
+            </label>
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top:16px;">Save</button>
+    </form>
+</div>
+{% endif %}
+
+<!-- ─── Morse Code Table Modal ────────────────────────────────────── -->
+<div class="modal-overlay morse-table-overlay" id="morseTableOverlay">
+    <div class="modal morse-table-modal" role="dialog" aria-modal="true" aria-labelledby="morseTableTitle">
+        <div class="modal-header">
+            <h2 class="modal-title" id="morseTableTitle">Morse Code Reference</h2>
+            <button class="modal-close" id="morseTableClose" aria-label="Close">&#10005;</button>
+        </div>
+        <p class="modal-desc">Complete reference for letters A–Z and digits 0–9.</p>
+        <div class="morse-table-search-wrap">
+            <input type="text" id="morseTableSearch" class="form-input morse-table-search"
+                placeholder="Search letter or Morse pattern..." autocomplete="off">
+        </div>
+        <div class="morse-table-grid" id="morseTableGrid">
+            <div class="mtrow" data-char="A" data-code=".-"><span class="mt-char">A</span><span class="mt-code">.-</span></div>
+            <div class="mtrow" data-char="B" data-code="-..."><span class="mt-char">B</span><span class="mt-code">-...</span></div>
+            <div class="mtrow" data-char="C" data-code="-.-."><span class="mt-char">C</span><span class="mt-code">-.-.</span></div>
+            <div class="mtrow" data-char="D" data-code="-.."><span class="mt-char">D</span><span class="mt-code">-..</span></div>
+            <div class="mtrow" data-char="E" data-code="."><span class="mt-char">E</span><span class="mt-code">.</span></div>
+            <div class="mtrow" data-char="F" data-code="..-."><span class="mt-char">F</span><span class="mt-code">..-.</span></div>
+            <div class="mtrow" data-char="G" data-code="--."><span class="mt-char">G</span><span class="mt-code">--.</span></div>
+            <div class="mtrow" data-char="H" data-code="...."><span class="mt-char">H</span><span class="mt-code">....</span></div>
+            <div class="mtrow" data-char="I" data-code=".."><span class="mt-char">I</span><span class="mt-code">..</span></div>
+            <div class="mtrow" data-char="J" data-code=".---"><span class="mt-char">J</span><span class="mt-code">.---</span></div>
+            <div class="mtrow" data-char="K" data-code="-.-"><span class="mt-char">K</span><span class="mt-code">-.-</span></div>
+            <div class="mtrow" data-char="L" data-code=".-.."><span class="mt-char">L</span><span class="mt-code">.-..</span></div>
+            <div class="mtrow" data-char="M" data-code="--"><span class="mt-char">M</span><span class="mt-code">--</span></div>
+            <div class="mtrow" data-char="N" data-code="-."><span class="mt-char">N</span><span class="mt-code">-.</span></div>
+            <div class="mtrow" data-char="O" data-code="---"><span class="mt-char">O</span><span class="mt-code">---</span></div>
+            <div class="mtrow" data-char="P" data-code=".--."><span class="mt-char">P</span><span class="mt-code">.--.</span></div>
+            <div class="mtrow" data-char="Q" data-code="--.-"><span class="mt-char">Q</span><span class="mt-code">--.-</span></div>
+            <div class="mtrow" data-char="R" data-code=".-."><span class="mt-char">R</span><span class="mt-code">.-.</span></div>
+            <div class="mtrow" data-char="S" data-code="..."><span class="mt-char">S</span><span class="mt-code">...</span></div>
+            <div class="mtrow" data-char="T" data-code="-"><span class="mt-char">T</span><span class="mt-code">-</span></div>
+            <div class="mtrow" data-char="U" data-code="..-"><span class="mt-char">U</span><span class="mt-code">..-</span></div>
+            <div class="mtrow" data-char="V" data-code="...-"><span class="mt-char">V</span><span class="mt-code">...-</span></div>
+            <div class="mtrow" data-char="W" data-code=".--"><span class="mt-char">W</span><span class="mt-code">.--</span></div>
+            <div class="mtrow" data-char="X" data-code="-..-"><span class="mt-char">X</span><span class="mt-code">-..-</span></div>
+            <div class="mtrow" data-char="Y" data-code="-.--"><span class="mt-char">Y</span><span class="mt-code">-.--</span></div>
+            <div class="mtrow" data-char="Z" data-code="--.."><span class="mt-char">Z</span><span class="mt-code">--..</span></div>
+            <div class="mtrow mtrow-digit" data-char="0" data-code="-----"><span class="mt-char">0</span><span class="mt-code">-----</span></div>
+            <div class="mtrow mtrow-digit" data-char="1" data-code=".----"><span class="mt-char">1</span><span class="mt-code">.----</span></div>
+            <div class="mtrow mtrow-digit" data-char="2" data-code="..---"><span class="mt-char">2</span><span class="mt-code">..---</span></div>
+            <div class="mtrow mtrow-digit" data-char="3" data-code="...--"><span class="mt-char">3</span><span class="mt-code">...--</span></div>
+            <div class="mtrow mtrow-digit" data-char="4" data-code="....-"><span class="mt-char">4</span><span class="mt-code">....-</span></div>
+            <div class="mtrow mtrow-digit" data-char="5" data-code="....."><span class="mt-char">5</span><span class="mt-code">.....</span></div>
+            <div class="mtrow mtrow-digit" data-char="6" data-code="-...."><span class="mt-char">6</span><span class="mt-code">-....</span></div>
+            <div class="mtrow mtrow-digit" data-char="7" data-code="--..."><span class="mt-char">7</span><span class="mt-code">--...</span></div>
+            <div class="mtrow mtrow-digit" data-char="8" data-code="---.."><span class="mt-char">8</span><span class="mt-code">---..</span></div>
+            <div class="mtrow mtrow-digit" data-char="9" data-code="----."><span class="mt-char">9</span><span class="mt-code">----.</span></div>
+        </div>
+        <p class="morse-table-empty" id="morseTableEmpty" style="display:none;">No matches found.</p>
+    </div>
+</div>
+
+{% if request.args.get('toast') == 'reset' %}
+<span id="pageToast" data-msg="Passcode reset successfully" style="display:none;"></span>
+{% endif %}
+<script>
+    localStorage.setItem('mv-keyboard-mode', {{ keyboard_mode | tojson }});
+</script>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}{{ code }} — MorseVault{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <div class="error-code">{{ code }}</div>
+    <h1 class="error-title">{{ message }}</h1>
+    <p class="error-detail">{{ detail }}</p>
+    <a href="{{ url_for('index') }}" class="btn btn-primary">&#8592; Back to Notes</a>
+</div>
+{% endblock %}
